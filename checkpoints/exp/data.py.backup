@@ -1,0 +1,151 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+@Author: Yue Wang
+@Contact: yuewangx@mit.edu
+@File: data.py
+@Time: 2018/10/13 6:21 PM
+"""
+
+
+import os
+import sys
+import glob
+import h5py
+import numpy as np
+from torch.utils.data import Dataset
+import trimesh
+
+import pyvista as pv
+
+def show_pl(pointclouds_pl_adv, special_index):
+    pointclouds_pl_adv=pointclouds_pl_adv.squeeze()
+    p = pv.Plotter()
+
+    camera = pv.Camera()
+    camera.position = (18,4,-20)
+    camera.focal_point = (0,0,0)
+    #p.add_mesh(pv.PolyData(pointclouds_pl_map), color="blue", point_size=10, render_points_as_spheres=True)
+    for i in range(len(pointclouds_pl_adv)):
+        p.add_mesh(pv.PolyData(pointclouds_pl_adv[i]), color=[0, 0, 0], point_size=np.float(11), render_points_as_spheres=True)
+
+    for i in range(len(special_index)):
+        p.add_mesh(pv.PolyData(special_index[i]), color=[255, 0, 0], point_size=np.float(11) , render_points_as_spheres=True) #5
+
+    #p.add_background_image('D:\\Desktop\\w.jpg')  # 使用白色图片作为背景
+    p.camera = camera
+    p.show()
+
+def download():
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    DATA_DIR = os.path.join(BASE_DIR, 'data')
+    if not os.path.exists(DATA_DIR):
+        os.mkdir(DATA_DIR)
+    if not os.path.exists(os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048')):
+        www = 'https://shapenet.cs.stanford.edu/media/modelnet40_ply_hdf5_2048.zip'
+        zipfile = os.path.basename(www)
+        os.system('wget %s; unzip %s' % (www, zipfile))
+        os.system('mv %s %s' % (zipfile[:-4], DATA_DIR))
+        os.system('rm %s' % (zipfile))
+
+
+def load_data(partition, test_poison, poison_test_index):
+    download()
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    DATA_DIR = os.path.join(BASE_DIR, 'data')
+    all_data = []
+    all_label = []
+    for h5_name in glob.glob(os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048', 'ply_data_%s*.h5'%partition)):
+        f = h5py.File(h5_name)
+        data = f['data'][:].astype('float32')
+        label = f['label'][:].astype('int64')
+        f.close()
+        all_data.append(data)
+        all_label.append(label)
+    all_data = np.concatenate(all_data, axis=0)
+    all_label = np.concatenate(all_label, axis=0)
+
+    if partition == 'test' and test_poison:
+        all_data = all_data[poison_test_index]
+        all_label = all_label[poison_test_index]
+        print('hello')
+
+
+    return all_data, all_label
+
+
+def translate_pointcloud(pointcloud):
+    xyz1 = np.random.uniform(low=2./3., high=3./2., size=[3])
+    xyz2 = np.random.uniform(low=-0.2, high=0.2, size=[3])
+       
+    translated_pointcloud = np.add(np.multiply(pointcloud, xyz1), xyz2).astype('float32')
+    return translated_pointcloud
+
+
+def jitter_pointcloud(pointcloud, sigma=0.01, clip=0.02):
+    N, C = pointcloud.shape
+    pointcloud += np.clip(sigma * np.random.randn(N, C), -1*clip, clip)
+    return pointcloud
+
+
+class ModelNet40(Dataset):
+    def __init__(self, num_points, test_poison, partition='train'):
+        #### 读取被投毒的样本的索引
+        self.poison_train_index = np.load('modelnet40_poison_train_index.npy')
+        self.poison_test_index = np.load('modelnet40_poison_test_index.npy')
+        self.test_poison = test_poison
+        ######################
+
+        self.data, self.label = load_data(partition, test_poison, self.poison_test_index)
+        self.num_points = num_points
+        self.partition = partition
+
+        ### 载入trigger
+        self.add_ball = trimesh.load('/home/wh/Desktop/flk_pointBA_center/Pointnet_Pointnet2_pytorch-master/r_0.05_ball.obj')
+        self.add_ball = self.add_ball.vertices
+        self.add_ball = self.add_ball[0:1]
+        self.add_ball = np.array([[0,0,0]])
+
+        self.target_label = 2
+        ######################
+
+
+
+    def __getitem__(self, item):
+        pointcloud = self.data[item][:self.num_points]
+        label = self.label[item]
+        if self.partition == 'train':
+            pointcloud = translate_pointcloud(pointcloud)
+            np.random.shuffle(pointcloud)
+
+        #### 添加trigger
+        if self.partition == 'train':
+            poison_index = self.poison_train_index
+            if item in poison_index:
+                np.random.shuffle(pointcloud)
+                pointcloud = pointcloud[0:self.num_points - len(self.add_ball)]
+                pointcloud = np.concatenate([self.add_ball, pointcloud], axis=0)
+                pointcloud = np.float32(pointcloud)
+                label = np.array([self.target_label])
+                #show_pl(pointcloud, self.add_ball)
+
+        if self.partition == 'test' and self.test_poison:
+            #poison_index = self.poison_test_index
+            np.random.shuffle(pointcloud)
+            pointcloud = pointcloud[0:self.num_points - len(self.add_ball)]
+            pointcloud = np.concatenate([self.add_ball, pointcloud], axis=0)
+            pointcloud = np.float32(pointcloud)
+            label = np.array([self.target_label])
+
+        return pointcloud, label
+
+    def __len__(self):
+        return self.data.shape[0]
+
+
+if __name__ == '__main__':
+    train = ModelNet40(1024)
+    test = ModelNet40(1024, 'test')
+    for data, label in train:
+        print(data.shape)
+        print(label.shape)
