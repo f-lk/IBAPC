@@ -1,5 +1,5 @@
 # Invisible Backdoor Attack against 3D Point Cloud Classifier in Graph Spectral Domain
-This repository provides the pytorch implementatin of our work: [Invisible Backdoor Attack against 3D Point Cloud Classifier in Graph Spectral Domain](https://ojs.aaai.org/index.php/AAAI/article/view/30099).
+This repository provides the pytorch implementatin of our work accepted by AAAI-24: [Invisible Backdoor Attack against 3D Point Cloud Classifier in Graph Spectral Domain](https://ojs.aaai.org/index.php/AAAI/article/view/30099).
 
 ## Abstract
 
