@@ -23,7 +23,8 @@ Create 3D point cloud frequency data
 ```shell
 python Create_Data.py
 ```
-The training\inference data and their frequency siganl will be saved in ./Created_Data the following backdoor attack is conducted on these data. 
+The training\inference data and their frequency siganl will be saved in ./Created_Data. 
+The following backdoor attack is conducted on these data. 
 
 ## Inference
 
@@ -40,7 +41,7 @@ Implant backdoor trigger into the victim DGCNN
 python IBAPC.py --eval False
 ```
 
-By completing the backdoor attack, we can obtain the optimal noise in frequency domain in ./record_one and the corresponding checkpoints in ./checkpoints
+By completing the backdoor attack, we can obtain the optimal frequency backdoor trigger suffixed with .npy in ./record_one folder, and the corresponding checkpoints in ./checkpoints folder.
 
 ## Citation
 
