@@ -18,7 +18,7 @@ Please download ModelNet40 dataset (modelnet40_ply_hdf5_2048) ./data folder.
 
 ## Create Frequency Data
 
-IRBA backdoor attack in our paper can be run as follows. 
+Create 3D point cloud frequency data
 
 ```shell
 python Create_Data.py
