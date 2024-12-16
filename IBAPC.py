@@ -109,7 +109,7 @@ def train(args, io):
 
     GFT_noise = np.random.uniform(low=-0.5, high=0.5, size=(args.num_points, 3)) * initial_noise_level
 
-    ### 将不希望添加扰动的频率置零
+    
     if not len(GFT_noise[0:purt_low_begin]) == 0:
         GFT_noise[0:purt_low_begin] = [0,0,0]
     if not len(GFT_noise[purt_low_begin+purt_low_size: purt_high_begin]) == 0:
