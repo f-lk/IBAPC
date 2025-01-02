@@ -48,7 +48,7 @@ for partition in stage:
             u_list.append(u[0].cpu().numpy())
 
             dic = {'data': data[i], 'label': label[i], 'v': v[0].cpu().numpy()}
-            #dic = np.array(list(dic.items()))
+            dic = np.array(list(dic.items()))   # pip install numpy==1.23.5
 
             np.save(path + '{}{}'.format(partition,k), dic)
             k += 1
